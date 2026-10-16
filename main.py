@@ -17,7 +17,9 @@ y_first = samples_first[:, 1]
 x_second = samples_second[:, 0]
 y_second = samples_second[:, 1]
 
-X = np.concatenate([x_first, x_second], axis=0)
+X = np.vstack([samples_first, samples_second])
+
+# TARGET
 Y = np.concatenate([
     np.zeros(len(samples_first)),
     np.ones(len(samples_first))
@@ -51,8 +53,8 @@ class GaussianClassificator():
         likelihoods = []
 
         for c in self.classes:
-            coef = 1/np.sqrt(2*np.pi*(self.var[c]**2))
-            exp = np.exp(- (X - self.mean[c])**2 / (2*(self.var[c]**2)))
+            coef = 1/np.sqrt(2*np.pi*(self.var[c]))
+            exp = np.exp(- (X - self.mean[c])**2 / (2*(self.var[c])))
             # Probabilities of x1, x2
             P_c = coef * exp
 
@@ -64,9 +66,20 @@ class GaussianClassificator():
 
         return np.argmax(likelihoods, axis=1)
 
+def train(X, Y):
+    split_index = int(len(X)*0.8)
+    train_X, test_X = np.split(X, [split_index])
 
+    train_Y, test_Y = np.split(Y, [split_index])
+    return train_X, test_X, train_Y, test_Y
 
+train_X, test_X, train_Y, test_Y = train(X, Y)
+classificator = GaussianClassificator()
+classificator.fit(train_X, train_Y)
+predictions = classificator.predict(test_X)
 
+accuracy = np.mean(predictions == test_Y)
+print(accuracy)
 
 
 
