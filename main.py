@@ -1,36 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-first = [-1, -1]
-second = [1, 1]
-
-Var = 1
-Cov = [[1, 0], [0, 1]]
-
-rng = np.random.Generator(np.random.PCG64(12345))
-samples_first = rng.multivariate_normal(mean=first, cov=Cov, size=1000)
-samples_second = rng.multivariate_normal(mean=second, cov=Cov, size=1000)
-
-x_first = samples_first[:, 0]
-y_first = samples_first[:, 1]
-
-x_second = samples_second[:, 0]
-y_second = samples_second[:, 1]
-
-X = np.vstack([samples_first, samples_second])
-
-# TARGET
-Y = np.concatenate([
-    np.zeros(len(samples_first)),
-    np.ones(len(samples_first))
-    ], axis=0)
-
-# make random indexes and apply it to X and Y
-# It it necessary or first 80% of Data will be 1600 zeros and 20% of ones
-indices = rng.permutation(len(X))
-X = X[indices]
-Y = Y[indices]
-
 class GaussianClassificator():
     def fit(self, X, Y):
         X = np.array(X)
@@ -73,15 +43,46 @@ def train(X, Y):
     train_Y, test_Y = np.split(Y, [split_index])
     return train_X, test_X, train_Y, test_Y
 
-train_X, test_X, train_Y, test_Y = train(X, Y)
-classificator = GaussianClassificator()
-classificator.fit(train_X, train_Y)
-predictions = classificator.predict(test_X)
+center = 0
 
-accuracy = np.mean(predictions == test_Y)
-print(accuracy)
+for center in range (0, 10):
+    first = [center/10, center/10]
+    second = [-center/10, -center/10]
 
+    Var = 1
+    Cov = [[1, 0], [0, 1]]
 
+    rng = np.random.Generator(np.random.PCG64(12345))
+    samples_first = rng.multivariate_normal(mean=first, cov=Cov, size=1000)
+    samples_second = rng.multivariate_normal(mean=second, cov=Cov, size=1000)
+
+    x_first = samples_first[:, 0]
+    y_first = samples_first[:, 1]
+
+    x_second = samples_second[:, 0]
+    y_second = samples_second[:, 1]
+
+    X = np.vstack([samples_first, samples_second])
+
+    # TARGET
+    Y = np.concatenate([
+        np.zeros(len(samples_first)),
+        np.ones(len(samples_first))
+        ], axis=0)
+
+    # make random indexes and apply it to X and Y
+    # It it necessary or first 80% of Data will be 1600 zeros and 20% of ones
+    indices = rng.permutation(len(X))
+    X = X[indices]
+    Y = Y[indices]
+
+    train_X, test_X, train_Y, test_Y = train(X, Y)
+    classificator = GaussianClassificator()
+    classificator.fit(train_X, train_Y)
+    predictions = classificator.predict(test_X)
+
+    accuracy = np.mean(predictions == test_Y)
+    print(accuracy)
 
 fig, axes = plt.subplots(2)
 axes[0].scatter(x_first, y_first)
