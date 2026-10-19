@@ -1,14 +1,46 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-'''class QuadraticDiscriminantClassificator():
-    def fit'''
+class QuadraticDiscriminantClassificator():
+    def fit(self, X, Y):
+        X = np.array(X)
+        Y = np.array(Y)
+
+        # All unique classes
+        self.classes = np.unique(Y)
+        self.mean = {}
+        self.cov = {}
+        self.priors = {}
+        for c in self.classes:
+            X_c = X[Y == c]
+            self.mean[c] = np.mean(X_c, axis=0)
+            self.cov[c] = np.cov(X_c, rowvar=False)
+            self.priors[c] = len(X_c) / len(X)
+        
+        return self.mean, self.cov, self.priors
+
+    def predict(self, X, Cov):
+        X = np.array(X)
+        for c in self.classes:
+            mean_vector = self.mean[c]
+            aprior = self.priors[c]
+            cov_matrix = self.cov[c]
+
+            diff = X - mean_vector
+            first_num = -0.5 * np.log(np.linalg.det(Cov))
+            second_num = -0.5 * np.sum((diff @ np.linalg.inv(cov_matrix) * diff), axis=1)
+            third_num = np.log(aprior)
+
+            QDA = first_num + second_num + third_num
+
+        
 
 class GaussianClassificator():
     def fit(self, X, Y):
         X = np.array(X)
         Y = np.array(Y)
 
+        # All unique classes
         self.classes = np.unique(Y)
 
         self.mean = {}
