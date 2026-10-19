@@ -48,54 +48,61 @@ def train(X, Y):
 
 centers = range (0, 10)
 correlations = np.linspace(0.0, 0.9, 10)
+dimensions = [2, 4, 6, 8]
 res_matrix = np.zeros((len(centers), len(correlations)))
 
-for i, center in enumerate(centers):
-    for j, correlation in enumerate(correlations):
-        first = [center/10, center/10]
-        second = [-center/10, -center/10]
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+axes = axes.flatten()
 
-        Var = 1
-        Cov = [[1, correlation], [correlation, 1]]
+for d, dimension in enumerate(dimensions): 
+    for i, center in enumerate(centers):
+        for j, correlation in enumerate(correlations):
+            
+            first = center/10 * np.ones(dimension)
+            second = -first
 
-        rng = np.random.Generator(np.random.PCG64(12345))
-        samples_first = rng.multivariate_normal(mean=first, cov=Cov, size=1000)
-        samples_second = rng.multivariate_normal(mean=second, cov=Cov, size=1000)
+            Var = 1
+            Cov = np.full((dimension, dimension), correlation)
+            np.fill_diagonal(Cov, 1.0)
 
-        x_first = samples_first[:, 0]
-        y_first = samples_first[:, 1]
+            rng = np.random.Generator(np.random.PCG64(12345))
+            samples_first = rng.multivariate_normal(mean=first, cov=Cov, size=1000)
+            samples_second = rng.multivariate_normal(mean=second, cov=Cov, size=1000)
 
-        x_second = samples_second[:, 0]
-        y_second = samples_second[:, 1]
+            x_first = samples_first[:, 0]
+            y_first = samples_first[:, 1]
 
-        X = np.vstack([samples_first, samples_second])
+            x_second = samples_second[:, 0]
+            y_second = samples_second[:, 1]
 
-        # TARGET
-        Y = np.concatenate([
-            np.zeros(len(samples_first)),
-            np.ones(len(samples_first))
-            ], axis=0)
+            X = np.vstack([samples_first, samples_second])
 
-        # make random indexes and apply it to X and Y
-        # It it necessary or first 80% of Data will be 1600 zeros and 20% of ones
-        indices = rng.permutation(len(X))
-        X = X[indices]
-        Y = Y[indices]
+            # TARGET
+            Y = np.concatenate([
+                np.zeros(len(samples_first)),
+                np.ones(len(samples_first))
+                ], axis=0)
 
-        train_X, test_X, train_Y, test_Y = train(X, Y)
-        classificator = GaussianClassificator()
-        classificator.fit(train_X, train_Y)
-        predictions = classificator.predict(test_X)
+            # make random indexes and apply it to X and Y
+            # It it necessary or first 80% of Data will be 1600 zeros and 20% of ones
+            indices = rng.permutation(len(X))
+            X = X[indices]
+            Y = Y[indices]
 
-        accuracy = np.mean(predictions == test_Y)
-        res_matrix[i, j] = accuracy
+            train_X, test_X, train_Y, test_Y = train(X, Y)
+            classificator = GaussianClassificator()
+            classificator.fit(train_X, train_Y)
+            predictions = classificator.predict(test_X)
 
-plt.figure(figsize=(8, 6))
-# origin='lower' чтобы нули были в левом нижнем углу, а не в левом верхнем
-plt.imshow(res_matrix, cmap='viridis', origin='lower', aspect='auto')
+            accuracy = np.mean(predictions == test_Y)
+            res_matrix[i, j] = accuracy
 
-plt.colorbar(label='Accuracy')
-plt.xlabel(r'Correlation ($\rho$ index)')
-plt.ylabel('Center distance index')
-plt.title('Naive Bayes Accuracy Degradation')
+    ax = axes[d]
+    im = ax.imshow(res_matrix, cmap='viridis', origin='lower', aspect='auto')
+    ax.set_title(f'Dimension D = {dimension}')
+    ax.set_xlabel(r'Correlation ($\rho$ index)')
+    ax.set_ylabel('Center distance')
+    fig.colorbar(im, ax=ax)    
+
+plt.tight_layout()
 plt.show()
