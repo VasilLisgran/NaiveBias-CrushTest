@@ -178,12 +178,12 @@ plt.tight_layout()
 fig1.savefig('Naive-Bias-one-seed.png', dpi=150, bbox_inches='tight')
 fig2.savefig('QDA-one-seed.png', dpi=150, bbox_inches='tight')'''
 
-center_values = np.array(centers) / 10
+# diff_heatmaps_all
+'''center_values = np.array(centers) / 10
 vmax = np.abs(mean_diff).max() # 28 panels
 fig, axes = plt.subplots(len(dimensions), len(data),
                          figsize=(2.4 * len(data), 2.2 * len(dimensions)),
                          sharex=True, sharey=True, constrained_layout=True)
-
 for k, n_train in enumerate(data):
     for d, dimension in enumerate(dimensions):
         ax = axes[d, k]
@@ -200,9 +200,26 @@ for k, n_train in enumerate(data):
         if k == 0:
             ax.set_ylabel(f'D = {dimension}\nCenter shift')
         if d == len(dimensions) - 1:
-            ax.set_xlabel('ρ')
+            ax.set_xlabel('ρ')'''
+i = 3   
+j = 7   
 
-fig.colorbar(im, ax=axes, label='QDA − NB (accuracy)', shrink=0.8)
-fig.suptitle('QDA − NB, mean on seeds (points: |mean| < 2·SE)')
-fig.savefig('diff_heatmaps_all.png', dpi=150, bbox_inches='tight')
+fig, ax = plt.subplots(figsize=(7, 5))
+
+for d, dimension in enumerate(dimensions):
+    y = mean_diff[:, d, i, j]         
+    err = 2 * se_diff[:, d, i, j]      
+    ax.fill_between(data, y - err, y + err, alpha=0.2)
+
+ax.axhline(0, color='k', lw=1)        
+ax.set_xscale('log')                   
+ax.set_xlabel('n ')
+ax.set_ylabel('QDA − NB (accuracy)')
+ax.set_title(f'Shift {centers[i]/10}, ρ = {correlations[j]:.1f}')
+ax.legend()
+fig.savefig('diff_vs_n.png', dpi=150, bbox_inches='tight')
+
+#fig.colorbar(im, ax=axes, label='QDA − NB (accuracy)', shrink=0.8)
+#fig.suptitle('QDA − NB, mean on seeds (points: |mean| < 2·SE)')
+#fig.savefig('diff_heatmaps_all.png', dpi=150, bbox_inches='tight')
 plt.show()
