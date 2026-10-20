@@ -201,22 +201,26 @@ for k, n_train in enumerate(data):
             ax.set_ylabel(f'D = {dimension}\nCenter shift')
         if d == len(dimensions) - 1:
             ax.set_xlabel('ρ')'''
-i = 3   
-j = 7   
 
-fig, ax = plt.subplots(figsize=(7, 5))
+cells = [(3, 7), (3, 0), (3, 9), (7, 7), (0, 7)] 
 
-for d, dimension in enumerate(dimensions):
-    y = mean_diff[:, d, i, j]         
-    err = 2 * se_diff[:, d, i, j]      
-    ax.fill_between(data, y - err, y + err, alpha=0.2)
+fig, axes = plt.subplots(1, len(cells), figsize=(4 * len(cells), 4),
+                         sharey=True, constrained_layout=True)
 
-ax.axhline(0, color='k', lw=1)        
-ax.set_xscale('log')                   
-ax.set_xlabel('n ')
-ax.set_ylabel('QDA − NB (accuracy)')
-ax.set_title(f'Shift {centers[i]/10}, ρ = {correlations[j]:.1f}')
-ax.legend()
+for ax, (ci, cj) in zip(axes, cells):          # одна панель на клетку
+    for d, dimension in enumerate(dimensions): # внутри неё по линии на каждое D
+        y = mean_diff[:, d, ci, cj]
+        err = 2 * se_diff[:, d, ci, cj]
+        ax.plot(data, y, marker='o', label=f'D = {dimension}')
+        ax.fill_between(data, y - err, y + err, alpha=0.2)
+    ax.axhline(0, color='k', lw=1)
+    ax.set_xscale('log')
+    ax.set_xlabel('n')
+    ax.set_title(f'Shift {ci/10}, ρ = {correlations[cj]:.1f}')
+
+
+axes[0].set_ylabel('QDA − NB (accuracy)')
+axes[0].legend()
 fig.savefig('diff_vs_n.png', dpi=150, bbox_inches='tight')
 
 #fig.colorbar(im, ax=axes, label='QDA − NB (accuracy)', shrink=0.8)
