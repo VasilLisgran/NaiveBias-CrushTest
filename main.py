@@ -92,6 +92,9 @@ fig2, axes2 = plt.subplots(2, 2, figsize=(12, 10))
 axes1 = axes1.flatten()
 axes2 = axes2.flatten()
 
+n_seeds = 20
+final_matrix = np.full((n_seeds, len(dimensions), len(centers), len(correlations)), np.nan)
+
 for d, dimension in enumerate(dimensions): 
     for i, center in enumerate(centers):
         for j, correlation in enumerate(correlations):
@@ -103,45 +106,50 @@ for d, dimension in enumerate(dimensions):
             Cov = np.full((dimension, dimension), correlation)
             np.fill_diagonal(Cov, 1.0)
 
-            rng = np.random.Generator(np.random.PCG64(12345))
-            samples_first = rng.multivariate_normal(mean=first, cov=Cov, size=1000)
-            samples_second = rng.multivariate_normal(mean=second, cov=Cov, size=1000)
+            for s in range(n_seeds):
+                rng = np.random.Generator(np.random.PCG64(s))
+                samples_first = rng.multivariate_normal(mean=first, cov=Cov, size=1000)
+                samples_second = rng.multivariate_normal(mean=second, cov=Cov, size=1000)
 
-            x_first = samples_first[:, 0]
-            y_first = samples_first[:, 1]
+                x_first = samples_first[:, 0]
+                y_first = samples_first[:, 1]
 
-            x_second = samples_second[:, 0]
-            y_second = samples_second[:, 1]
+                x_second = samples_second[:, 0]
+                y_second = samples_second[:, 1]
 
-            X = np.vstack([samples_first, samples_second])
+                X = np.vstack([samples_first, samples_second])
 
-            # TARGET
-            Y = np.concatenate([
-                np.zeros(len(samples_first)),
-                np.ones(len(samples_first))
-                ], axis=0)
+                # TARGET
+                Y = np.concatenate([
+                    np.zeros(len(samples_first)),
+                    np.ones(len(samples_first))
+                    ], axis=0)
 
-            # make random indexes and apply it to X and Y
-            # It it necessary or first 80% of Data will be 1600 zeros and 20% of ones
-            indices = rng.permutation(len(X))
-            X = X[indices]
-            Y = Y[indices]
+                # make random indexes and apply it to X and Y
+                # It it necessary or first 80% of Data will be 1600 zeros and 20% of ones
+                indices = rng.permutation(len(X))
+                X = X[indices]
+                Y = Y[indices]
 
-            train_X, test_X, train_Y, test_Y = train(X, Y)
+                train_X, test_X, train_Y, test_Y = train(X, Y)
 
-            classificator1 = GaussianClassificator()
-            classificator1.fit(train_X, train_Y)
-            predictions1 = classificator1.predict(test_X)
+                classificator1 = GaussianClassificator()
+                classificator1.fit(train_X, train_Y)
+                predictions1 = classificator1.predict(test_X)
 
-            accuracy1 = np.mean(predictions1 == test_Y)
-            res_matrix1[i, j] = accuracy1
+                accuracy1 = np.mean(predictions1 == test_Y)
+                res_matrix1[i, j] = accuracy1
 
-            classificator2 = QuadraticDiscriminantClassificator()
-            classificator2.fit(train_X, train_Y)
-            predictions2 = classificator2.predict(test_X)
+                classificator2 = QuadraticDiscriminantClassificator()
+                classificator2.fit(train_X, train_Y)
+                predictions2 = classificator2.predict(test_X)
 
-            accuracy2 = np.mean(predictions2 == test_Y)
-            res_matrix2[i, j] = accuracy2
+                accuracy2 = np.mean(predictions2 == test_Y)
+                res_matrix2[i, j] = accuracy2
+
+                final_matrix[s, d, i, j] = accuracy2 - accuracy1
+
+
 
     im1 = axes1[d].imshow(res_matrix1, cmap='viridis', origin='lower', aspect='auto')
     axes1[d].set_title(f'Dimension D = {dimension}')
@@ -154,6 +162,12 @@ for d, dimension in enumerate(dimensions):
     axes2[d].set_xlabel(r'Correlation ($\rho$ index)')
     axes2[d].set_ylabel('Center distance')
     fig2.colorbar(im2, ax=axes2[d])  
+
+mean_diff = final_matrix.mean(axis=0)
+# how spread out they are around the center in terms of seeds
+se_diff = final_matrix.std(axis=0, ddof=1) / np.sqrt(n_seeds)
+print(mean_diff)
+print(se_diff)
 
 fig1.tight_layout()
 plt.tight_layout()
