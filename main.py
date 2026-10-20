@@ -19,9 +19,11 @@ class QuadraticDiscriminantClassificator():
         
         return self.mean, self.cov, self.priors
 
-    def predict(self, X, Cov):
+    def predict(self, X):
         X = np.array(X)
-        for c in self.classes:
+        scores = np.zeros((len(X), len(self.classes)))
+
+        for idx, c in enumerate(self.classes):
             mean_vector = self.mean[c]
             aprior = self.priors[c]
             cov_matrix = self.cov[c]
@@ -32,8 +34,9 @@ class QuadraticDiscriminantClassificator():
             third_num = np.log(aprior)
 
             QDA = first_num + second_num + third_num
-
-        
+            scores[:, idx] = QDA
+        predicted = np.argmax(scores, axes=1)
+        return self.classes[predicted]
 
 class GaussianClassificator():
     def fit(self, X, Y):
