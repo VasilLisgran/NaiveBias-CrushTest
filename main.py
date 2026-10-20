@@ -29,13 +29,13 @@ class QuadraticDiscriminantClassificator():
             cov_matrix = self.cov[c]
 
             diff = X - mean_vector
-            first_num = -0.5 * np.log(np.linalg.det(Cov))
+            first_num = -0.5 * np.log(np.linalg.det(cov_matrix))
             second_num = -0.5 * np.sum((diff @ np.linalg.inv(cov_matrix) * diff), axis=1)
             third_num = np.log(aprior)
 
             QDA = first_num + second_num + third_num
             scores[:, idx] = QDA
-        predicted = np.argmax(scores, axes=1)
+        predicted = np.argmax(scores, axis=1)
         return self.classes[predicted]
 
 class GaussianClassificator():
@@ -84,10 +84,13 @@ def train(X, Y):
 centers = range (0, 10)
 correlations = np.linspace(0.0, 0.9, 10)
 dimensions = [2, 4, 6, 8]
-res_matrix = np.zeros((len(centers), len(correlations)))
+res_matrix1 = np.zeros((len(centers), len(correlations)))
+res_matrix2 = np.zeros((len(centers), len(correlations)))
 
-fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-axes = axes.flatten()
+fig1, axes1 = plt.subplots(2, 2, figsize=(12, 10))
+fig2, axes2 = plt.subplots(2, 2, figsize=(12, 10))
+axes1 = axes1.flatten()
+axes2 = axes2.flatten()
 
 for d, dimension in enumerate(dimensions): 
     for i, center in enumerate(centers):
@@ -125,19 +128,33 @@ for d, dimension in enumerate(dimensions):
             Y = Y[indices]
 
             train_X, test_X, train_Y, test_Y = train(X, Y)
-            classificator = GaussianClassificator()
-            classificator.fit(train_X, train_Y)
-            predictions = classificator.predict(test_X)
 
-            accuracy = np.mean(predictions == test_Y)
-            res_matrix[i, j] = accuracy
+            classificator1 = GaussianClassificator()
+            classificator1.fit(train_X, train_Y)
+            predictions1 = classificator1.predict(test_X)
 
-    ax = axes[d]
-    im = ax.imshow(res_matrix, cmap='viridis', origin='lower', aspect='auto')
-    ax.set_title(f'Dimension D = {dimension}')
-    ax.set_xlabel(r'Correlation ($\rho$ index)')
-    ax.set_ylabel('Center distance')
-    fig.colorbar(im, ax=ax)    
+            accuracy1 = np.mean(predictions1 == test_Y)
+            res_matrix1[i, j] = accuracy1
 
+            classificator2 = QuadraticDiscriminantClassificator()
+            classificator2.fit(train_X, train_Y)
+            predictions2 = classificator2.predict(test_X)
+
+            accuracy2 = np.mean(predictions2 == test_Y)
+            res_matrix2[i, j] = accuracy2
+
+    im1 = axes1[d].imshow(res_matrix1, cmap='viridis', origin='lower', aspect='auto')
+    axes1[d].set_title(f'Dimension D = {dimension}')
+    axes1[d].set_xlabel(r'Correlation ($\rho$ index)')
+    axes1[d].set_ylabel('Center distance')
+    fig1.colorbar(im1, ax=axes1[d])  
+
+    im2 = axes2[d].imshow(res_matrix2, cmap='viridis', origin='lower', aspect='auto')
+    axes2[d].set_title(f'Dimension D = {dimension}')
+    axes2[d].set_xlabel(r'Correlation ($\rho$ index)')
+    axes2[d].set_ylabel('Center distance')
+    fig2.colorbar(im2, ax=axes2[d])  
+
+fig1.tight_layout()
 plt.tight_layout()
 plt.show()
