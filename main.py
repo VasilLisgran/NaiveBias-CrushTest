@@ -87,10 +87,11 @@ dimensions = [2, 4, 6, 8]
 res_matrix1 = np.zeros((len(centers), len(correlations)))
 res_matrix2 = np.zeros((len(centers), len(correlations)))
 
-fig1, axes1 = plt.subplots(2, 2, figsize=(12, 10))
+# Naive-Bias and QDA -one-seed show part
+'''fig1, axes1 = plt.subplots(2, 2, figsize=(12, 10))
 fig2, axes2 = plt.subplots(2, 2, figsize=(12, 10))
 axes1 = axes1.flatten()
-axes2 = axes2.flatten()
+axes2 = axes2.flatten()'''
 
 n_seeds = 20
 final_matrix = np.full((n_seeds, len(dimensions), len(centers), len(correlations)), np.nan)
@@ -149,9 +150,8 @@ for d, dimension in enumerate(dimensions):
 
                 final_matrix[s, d, i, j] = accuracy2 - accuracy1
 
-
-
-    im1 = axes1[d].imshow(res_matrix1, cmap='viridis', origin='lower', aspect='auto')
+    # Naive-Bias and QDA -one-seed show part
+    '''im1 = axes1[d].imshow(res_matrix1, cmap='viridis', origin='lower', aspect='auto')
     axes1[d].set_title(f'Dimension D = {dimension}')
     axes1[d].set_xlabel(r'Correlation ($\rho$ index)')
     axes1[d].set_ylabel('Center distance')
@@ -161,7 +161,7 @@ for d, dimension in enumerate(dimensions):
     axes2[d].set_title(f'Dimension D = {dimension}')
     axes2[d].set_xlabel(r'Correlation ($\rho$ index)')
     axes2[d].set_ylabel('Center distance')
-    fig2.colorbar(im2, ax=axes2[d])  
+    fig2.colorbar(im2, ax=axes2[d])  '''
 
 mean_diff = final_matrix.mean(axis=0)
 # how spread out they are around the center in terms of seeds
@@ -169,6 +169,35 @@ se_diff = final_matrix.std(axis=0, ddof=1) / np.sqrt(n_seeds)
 print(mean_diff)
 print(se_diff)
 
-fig1.tight_layout()
+# Naive-Bias and QDA -one-seed show part
+'''fig1.tight_layout()
 plt.tight_layout()
+
+fig1.savefig('Naive-Bias-one-seed.png', dpi=150, bbox_inches='tight')
+fig2.savefig('QDA-one-seed.png', dpi=150, bbox_inches='tight')'''
+
+center_values = np.array(centers) / 10        # настоящие значения сдвига: 0, 0.1, ..., 0.9
+vmax = np.abs(mean_diff).max()                # общий предел шкалы для всех панелей
+
+fig, axes = plt.subplots(2, 2, figsize=(12, 10), constrained_layout=True)
+axes = axes.flatten()
+
+for d, dimension in enumerate(dimensions):
+    ax = axes[d]
+    im = ax.imshow(mean_diff[d], cmap='RdBu_r', vmin=-vmax, vmax=vmax,
+                   origin='lower', aspect='auto',
+                   extent=[-0.05, 0.95, -0.05, 0.95])
+
+    not_sig = np.abs(mean_diff[d]) < 2 * se_diff[d]   # True там, где эффект ≈ шум
+    ii, jj = np.where(not_sig)                        # индексы таких ячеек
+    ax.scatter(correlations[jj], center_values[ii], s=10, c='k')
+
+    ax.set_title(f'D = {dimension}')
+    ax.set_xlabel('Корреляция ρ')
+    ax.set_ylabel('Сдвиг центра')
+
+fig.colorbar(im, ax=list(axes), label='QDA − NB (accuracy)')
+fig.suptitle('QDA − NB, среднее по сидам (точки: |среднее| < 2·SE)')
+fig.savefig('diff_heatmaps.png', dpi=150, bbox_inches='tight')
+
 plt.show()
