@@ -95,6 +95,9 @@ axes1 = axes1.flatten()
 axes2 = axes2.flatten()'''
 
 n_seeds = 20
+axis_k = 0
+tag = f'toep_e{axis_k + 1}'
+
 final_matrix = np.full((len(data), n_seeds, len(dimensions), len(centers), len(correlations)), np.nan)
 
 for idx, inf in enumerate(data):
@@ -103,13 +106,13 @@ for idx, inf in enumerate(data):
             for j, correlation in enumerate(correlations):
 
                 direction = np.zeros(dimension)
-                direction[0] = 1     
+                direction[axis_k] = 1     
                 first = center/10 * direction
                 second = -first
 
-                Var = 1
-                Cov = np.full((dimension, dimension), correlation)
-                np.fill_diagonal(Cov, 1.0)
+                prop_nums = np.arange(dimension)
+                distance = np.abs(np.subtract.outer(prop_nums, prop_nums))
+                Cov = correlation ** distance
 
                 for s in range(n_seeds):
                     rng = np.random.Generator(np.random.PCG64(s))
@@ -222,8 +225,7 @@ for ax, (ci, cj) in zip(axes, cells):          # one panel per cell
 
 axes[0].set_ylabel('QDA − NB (accuracy)')
 axes[0].legend()
-tag = 'e1_equi'
-fig.suptitle(f'QDA − NB vs n: shift along x1, equicorrelated Σ  [{tag}]')
+fig.suptitle(f'QDA − NB vs n: shift along x{axis_k + 1}, Toeplitz Σ  [{tag}]')
 fig.savefig(f'diff_vs_n_{tag}.png', dpi=150, bbox_inches='tight')
 
 #fig.colorbar(im, ax=axes, label='QDA − NB (accuracy)', shrink=0.8)
