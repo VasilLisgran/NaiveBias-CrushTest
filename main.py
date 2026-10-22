@@ -105,9 +105,10 @@ for idx, inf in enumerate(data):
                 first = center/10 * np.ones(dimension)
                 second = -first
 
+                prop_nums = np.arange(dimension)
+                distance = np.abs(np.subtract.outer(prop_nums, prop_nums))
                 Var = 1
-                Cov = np.full((dimension, dimension), correlation)
-                np.fill_diagonal(Cov, 1.0)
+                Cov = correlation ** distance
 
                 for s in range(n_seeds):
                     rng = np.random.Generator(np.random.PCG64(s))
@@ -207,8 +208,8 @@ cells = [(3, 7), (3, 0), (3, 9), (7, 7), (0, 7)]
 fig, axes = plt.subplots(1, len(cells), figsize=(4 * len(cells), 4),
                          sharey=True, constrained_layout=True)
 
-for ax, (ci, cj) in zip(axes, cells):          # одна панель на клетку
-    for d, dimension in enumerate(dimensions): # внутри неё по линии на каждое D
+for ax, (ci, cj) in zip(axes, cells):          # one panel per cell
+    for d, dimension in enumerate(dimensions):
         y = mean_diff[:, d, ci, cj]
         err = 2 * se_diff[:, d, ci, cj]
         ax.plot(data, y, marker='o', label=f'D = {dimension}')
@@ -217,7 +218,6 @@ for ax, (ci, cj) in zip(axes, cells):          # одна панель на кл
     ax.set_xscale('log')
     ax.set_xlabel('n')
     ax.set_title(f'Shift {ci/10}, ρ = {correlations[cj]:.1f}')
-
 
 axes[0].set_ylabel('QDA − NB (accuracy)')
 axes[0].legend()
