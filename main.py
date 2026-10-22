@@ -95,7 +95,7 @@ axes1 = axes1.flatten()
 axes2 = axes2.flatten()'''
 
 n_seeds = 20
-axis_k = 0
+axis_k = 1
 tag = f'toep_e{axis_k + 1}'
 
 final_matrix = np.full((len(data), n_seeds, len(dimensions), len(centers), len(correlations)), np.nan)
