@@ -101,14 +101,15 @@ for idx, inf in enumerate(data):
     for d, dimension in enumerate(dimensions): 
         for i, center in enumerate(centers):
             for j, correlation in enumerate(correlations):
-                
-                first = center/10 * np.ones(dimension)
+
+                direction = np.zeros(dimension)
+                direction[0] = 1     
+                first = center/10 * direction
                 second = -first
 
-                prop_nums = np.arange(dimension)
-                distance = np.abs(np.subtract.outer(prop_nums, prop_nums))
                 Var = 1
-                Cov = correlation ** distance
+                Cov = np.full((dimension, dimension), correlation)
+                np.fill_diagonal(Cov, 1.0)
 
                 for s in range(n_seeds):
                     rng = np.random.Generator(np.random.PCG64(s))
@@ -221,9 +222,14 @@ for ax, (ci, cj) in zip(axes, cells):          # one panel per cell
 
 axes[0].set_ylabel('QDA − NB (accuracy)')
 axes[0].legend()
-fig.savefig('diff_vs_n.png', dpi=150, bbox_inches='tight')
+tag = 'e1_equi'
+fig.suptitle(f'QDA − NB vs n: shift along x1, equicorrelated Σ  [{tag}]')
+fig.savefig(f'diff_vs_n_{tag}.png', dpi=150, bbox_inches='tight')
 
 #fig.colorbar(im, ax=axes, label='QDA − NB (accuracy)', shrink=0.8)
 #fig.suptitle('QDA − NB, mean on seeds (points: |mean| < 2·SE)')
 #fig.savefig('diff_heatmaps_all.png', dpi=150, bbox_inches='tight')
 plt.show()
+
+np.save(f'mean_diff_{tag}.npy', mean_diff)
+np.save(f'se_diff_{tag}.npy', se_diff)
