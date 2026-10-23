@@ -95,80 +95,88 @@ axes1 = axes1.flatten()
 axes2 = axes2.flatten()'''
 
 n_seeds = 20
-axis_k = 1
-tag = f'toep_e{axis_k + 1}'
+shift_len = 0.3
+tag = 'angle_equi'
+degrees_grid = [0, 15, 30, 45, 60, 75, 90]
 
-final_matrix = np.full((len(data), n_seeds, len(dimensions), len(centers), len(correlations)), np.nan)
+final_matrix = np.full((len(data), n_seeds, len(dimensions), len(degrees_grid), len(correlations)), np.nan)
 
 for idx, inf in enumerate(data):
     for d, dimension in enumerate(dimensions): 
-        for i, center in enumerate(centers):
+        #for i, center in enumerate(centers):
             for j, correlation in enumerate(correlations):
+                for i, degree in enumerate(degrees_grid):
 
-                direction = np.zeros(dimension)
-                direction[axis_k] = 1     
-                first = center/10 * direction
-                second = -first
+                    # centers of first and second class: shift direction d(θ) = cosθ·u + sinθ·v
+                    rad = np.deg2rad(degree)
+                    u = np.ones(dimension) / np.sqrt(dimension)   # along (1,...,1), length 1
+                    v = np.zeros(dimension)
+                    v[0], v[1] = 1, -1
+                    v = v / np.sqrt(2)                            # across, length 1
+                    direction = np.cos(rad) * u + np.sin(rad) * v
+                    assert np.isclose(np.linalg.norm(direction), 1)
+                    first = shift_len * direction
+                    second = -first
+    
+                    # equicorrelated covariance matrix
+                    Cov = np.full((dimension, dimension), correlation)
+                    np.fill_diagonal(Cov, 1.0)
 
-                prop_nums = np.arange(dimension)
-                distance = np.abs(np.subtract.outer(prop_nums, prop_nums))
-                Cov = correlation ** distance
+                    for s in range(n_seeds):
+                        rng = np.random.Generator(np.random.PCG64(s))
+                        samples_first = rng.multivariate_normal(mean=first, cov=Cov, size=inf)
+                        samples_second = rng.multivariate_normal(mean=second, cov=Cov, size=inf)
 
-                for s in range(n_seeds):
-                    rng = np.random.Generator(np.random.PCG64(s))
-                    samples_first = rng.multivariate_normal(mean=first, cov=Cov, size=inf)
-                    samples_second = rng.multivariate_normal(mean=second, cov=Cov, size=inf)
+                        x_first = samples_first[:, 0]
+                        y_first = samples_first[:, 1]
 
-                    x_first = samples_first[:, 0]
-                    y_first = samples_first[:, 1]
+                        x_second = samples_second[:, 0]
+                        y_second = samples_second[:, 1]
 
-                    x_second = samples_second[:, 0]
-                    y_second = samples_second[:, 1]
+                        X = np.vstack([samples_first, samples_second])
 
-                    X = np.vstack([samples_first, samples_second])
+                        # TARGET
+                        Y = np.concatenate([
+                            np.zeros(len(samples_first)),
+                            np.ones(len(samples_first))
+                            ], axis=0)
 
-                    # TARGET
-                    Y = np.concatenate([
-                        np.zeros(len(samples_first)),
-                        np.ones(len(samples_first))
-                        ], axis=0)
+                        # make random indexes and apply it to X and Y
+                        # It it necessary or first 80% of Data will be 1600 zeros and 20% of ones
+                        indices = rng.permutation(len(X))
+                        X = X[indices]
+                        Y = Y[indices]
 
-                    # make random indexes and apply it to X and Y
-                    # It it necessary or first 80% of Data will be 1600 zeros and 20% of ones
-                    indices = rng.permutation(len(X))
-                    X = X[indices]
-                    Y = Y[indices]
+                        train_X, test_X, train_Y, test_Y = train(X, Y)
 
-                    train_X, test_X, train_Y, test_Y = train(X, Y)
+                        classificator1 = GaussianClassificator()
+                        classificator1.fit(train_X, train_Y)
+                        predictions1 = classificator1.predict(test_X)
 
-                    classificator1 = GaussianClassificator()
-                    classificator1.fit(train_X, train_Y)
-                    predictions1 = classificator1.predict(test_X)
+                        accuracy1 = np.mean(predictions1 == test_Y)
+                        res_matrix1[i, j] = accuracy1
 
-                    accuracy1 = np.mean(predictions1 == test_Y)
-                    res_matrix1[i, j] = accuracy1
+                        classificator2 = QuadraticDiscriminantClassificator()
+                        classificator2.fit(train_X, train_Y)
+                        predictions2 = classificator2.predict(test_X)
 
-                    classificator2 = QuadraticDiscriminantClassificator()
-                    classificator2.fit(train_X, train_Y)
-                    predictions2 = classificator2.predict(test_X)
+                        accuracy2 = np.mean(predictions2 == test_Y)
+                        res_matrix2[i, j] = accuracy2
 
-                    accuracy2 = np.mean(predictions2 == test_Y)
-                    res_matrix2[i, j] = accuracy2
+                        final_matrix[idx, s, d, i, j] = accuracy2 - accuracy1
 
-                    final_matrix[idx, s, d, i, j] = accuracy2 - accuracy1
+            # Naive-Bias and QDA -one-seed show part
+            '''im1 = axes1[d].imshow(res_matrix1, cmap='viridis', origin='lower', aspect='auto')
+            axes1[d].set_title(f'Dimension D = {dimension}')
+            axes1[d].set_xlabel(r'Correlation ($\rho$ index)')
+            axes1[d].set_ylabel('Center distance')
+            fig1.colorbar(im1, ax=axes1[d])  
 
-        # Naive-Bias and QDA -one-seed show part
-        '''im1 = axes1[d].imshow(res_matrix1, cmap='viridis', origin='lower', aspect='auto')
-        axes1[d].set_title(f'Dimension D = {dimension}')
-        axes1[d].set_xlabel(r'Correlation ($\rho$ index)')
-        axes1[d].set_ylabel('Center distance')
-        fig1.colorbar(im1, ax=axes1[d])  
-
-        im2 = axes2[d].imshow(res_matrix2, cmap='viridis', origin='lower', aspect='auto')
-        axes2[d].set_title(f'Dimension D = {dimension}')
-        axes2[d].set_xlabel(r'Correlation ($\rho$ index)')
-        axes2[d].set_ylabel('Center distance')
-        fig2.colorbar(im2, ax=axes2[d])  '''
+            im2 = axes2[d].imshow(res_matrix2, cmap='viridis', origin='lower', aspect='auto')
+            axes2[d].set_title(f'Dimension D = {dimension}')
+            axes2[d].set_xlabel(r'Correlation ($\rho$ index)')
+            axes2[d].set_ylabel('Center distance')
+            fig2.colorbar(im2, ax=axes2[d])  '''
 
 mean_diff = final_matrix.mean(axis=1)
 # how spread out they are around the center in terms of seeds
@@ -209,24 +217,26 @@ for k, n_train in enumerate(data):
 
 cells = [(3, 7), (3, 0), (3, 9), (7, 7), (0, 7)] 
 
-fig, axes = plt.subplots(1, len(cells), figsize=(4 * len(cells), 4),
+j_rho = int(np.argmin(np.abs(correlations - 0.7)))   # индекс ρ = 0.7
+n_show = [3, 5, 6]                                   # индексы в data: 400, 1600, 3200
+
+fig, axes = plt.subplots(1, len(dimensions), figsize=(4 * len(dimensions), 4),
                          sharey=True, constrained_layout=True)
 
-for ax, (ci, cj) in zip(axes, cells):          # one panel per cell
-    for d, dimension in enumerate(dimensions):
-        y = mean_diff[:, d, ci, cj]
-        err = 2 * se_diff[:, d, ci, cj]
-        ax.plot(data, y, marker='o', label=f'D = {dimension}')
-        ax.fill_between(data, y - err, y + err, alpha=0.2)
+for d, (ax, dimension) in enumerate(zip(axes, dimensions)):
+    for k in n_show:
+        y = mean_diff[k, d, :, j_rho]
+        err = 2 * se_diff[k, d, :, j_rho]
+        ax.plot(degrees_grid, y, marker='o', label=f'n = {data[k]}')
+        ax.fill_between(degrees_grid, y - err, y + err, alpha=0.2)
     ax.axhline(0, color='k', lw=1)
-    ax.set_xscale('log')
-    ax.set_xlabel('n')
-    ax.set_title(f'Shift {ci/10}, ρ = {correlations[cj]:.1f}')
+    ax.set_xlabel('θ, degrees')
+    ax.set_title(f'D = {dimension}, ρ = {correlations[j_rho]:.1f}')
 
 axes[0].set_ylabel('QDA − NB (accuracy)')
 axes[0].legend()
-fig.suptitle(f'QDA − NB vs n: shift along x{axis_k + 1}, Toeplitz Σ  [{tag}]')
-fig.savefig(f'diff_vs_n_{tag}.png', dpi=150, bbox_inches='tight')
+fig.suptitle(f'QDA − NB vs angle θ: equicorrelated Σ, shift length = {shift_len}  [{tag}]')
+fig.savefig(f'diff_vs_angle_{tag}.png', dpi=150, bbox_inches='tight')
 
 #fig.colorbar(im, ax=axes, label='QDA − NB (accuracy)', shrink=0.8)
 #fig.suptitle('QDA − NB, mean on seeds (points: |mean| < 2·SE)')
